@@ -1,9 +1,15 @@
 package cse512
-
+import scala.math._
 object HotzoneUtils {
 
-  def StContains(rectPoints: Array[Double],points: Array[Double]):Boolean = {
-    if (points(0)>=rectPoints(0) && points(0)<=rectPoints(2) && points(1)>=rectPoints(1) && points(1)<=rectPoints(3)){
+  def ST_Contains(queryRectangle: String,pointString: String):Boolean = {
+    var rectPoints: Array[Double] = queryRectangle.split(",").map(_.toDouble);
+    var points: Array[Double] = pointString.split(",").map(_.toDouble);
+    var smaller_x = min(rectPoints(0),rectPoints(2))
+    var larger_x = max(rectPoints(0),rectPoints(2))
+    var smaller_y = min(rectPoints(1),rectPoints(3))
+    var larger_y = max(rectPoints(1),rectPoints(3))
+    if (points(0)>=smaller_x && points(0)<=larger_x && points(1)>=smaller_y && points(1)<=larger_y){
       return true;
     }
     return false;
