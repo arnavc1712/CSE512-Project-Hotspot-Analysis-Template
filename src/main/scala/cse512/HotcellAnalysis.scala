@@ -48,16 +48,14 @@ def runHotcellAnalysis(spark: SparkSession, pointPath: String): DataFrame =
 
   // YOU NEED TO CHANGE THIS PART
 
-  val uniqueCombsDF = spark.sql("select x,y,x,count(*) as cnt from intermediate group by z,x,y order by z,x,y")
-
+  val uniqueCombsDF = spark.sql("select x,y,z,count(*) as cnt from intermediate group by z,x,y order by z,x,y")
   uniqueCombsDF.createOrReplaceTempView("uniqueCombCount")
   spark.udf.register("Square",(num:Int)=>((num*num)));
 
-  val sumPointsDF = spark.sql("select sum(cnt) as sum,Square(cnt) as sum_squared from uniqueCombCount")
+  val sumPointsDF = spark.sql("select sum(cnt) as sum,sum(Square(cnt)) as sum_squared from uniqueCombCount")
 
-  val sumPoints = sumPointsDF.first().getInt(0) //Only used for mean calculation
-  val sumSquared:Double = sumPointsDF.first().getLong(1) //Only used for SD calculation
-
+  val sumPoints = sumPointsDF.first().getLong(0) //Only used for mean calculation
+  val sumSquared = sumPointsDF.first().getLong(1) //Only used for SD calculation
   val mean:Double = sumPoints/numCells;
   //val mean = mean.asInstanceOf[Double]
   //val i:Double = 2.0;
@@ -69,20 +67,38 @@ def runHotcellAnalysis(spark: SparkSession, pointPath: String): DataFrame =
   spark.udf.register("CalcNumNeighbors",(minX:Int,maxX:Int,minY:Int,maxY:Int,minZ:Int,maxZ:Int,X:Int,Y:Int,Z:Int) => ((
     HotcellUtils.countNeighbors(minX,maxX,minY,maxY,minZ,maxZ,X,Y,Z)
   )))
-  val neigboursSum = spark.sql(f"select CalcNeighbors($minX%s,$maxX%s,$minY%s,$maxY%s,$minZ%s,$maxZ%s,l1.x,l1.y,l1.z) l1.x,l1.y,l1.z, sum(l2.count) as n_count from uniqueCombsDF l1,uniqueCombsDF l2 where (l1.x=l2.x and l1.y=l2.y and l1.z=l2.z) or (l2.x=l1.x-1 and l2.y=l1.y-1 and l2.z=l1.z-1) or (l2.x=l1.x+1 and l2.y=l1.y+1 and l2.z=l1.z+1)")
+
+  spark.udf.register("CalcDen",(n_count:Long) =>(({
+    var x = SD * math.sqrt((numCells*n_count - (n_count*n_count))/(numCells-1))
+    x
+  })))
+//  val neigboursSum = spark.sql(f"select CalcNumNeighbors($minX%s,$maxX%s,$minY%s,$maxY%s,$minZ%s,$maxZ%s,l1.x,l1.y,l1.z), l1.x,l1.y,l1.z, sum(l2.cnt) as n_count from uniqueCombCount l1,uniqueCombCount l2 where (l1.x=l2.x and l1.y=l2.y and l1.z=l2.z) or (l2.x=l1.x-1 and l2.y=l1.y-1 and l2.z=l1.z-1) or (l2.x=l1.x+1 and l2.y=l1.y+1 and l2.z=l1.z+1) group by (l1.z,l1.y,l1.x) order by (l1.z,l1.y,l1.x)")
+
+  val neighboursSum = spark.sql(f"select CalcNumNeighbors($minX%s,$maxX%s,$minY%s,$maxY%s,$minZ%s,$maxZ%s,l1.x,l1.y,l1.z) as n_count, l1.x as x,l1.y as y,l1.z as z,sum(l2.cnt) as n_sum from uniqueCombCount l1, uniqueCombCount l2 where (l1.x=l2.x or l1.x=l2.x-1 or l1.x=l2.x+1) and (l1.y=l2.y or l1.y=l2.y-1 or l1.y=l2.y+1) and (l1.z=l2.z or l1.z=l2.z-1 and l1.z=l2.z+1) group by l1.z,l1.y,l1.x order by l1.z,l1.y,l1.x")
+
+  neighboursSum.createOrReplaceTempView("neighboursSum")
+
+  val num = spark.sql(f"select x,y,z,(n_sum-($mean*n_count)) as num from neighboursSum")
+
+  val den = spark.sql(f"select x,y,z,calcDen(n_count) as den from neighboursSum")
+
+  num.createOrReplaceTempView("numerator")
+  den.createOrReplaceTempView("denominator")
+
+
+  val res = spark.sql("select n1.x as x,n1.y as y,n1.z as z,(num/den) as res from numerator n1,denominator n2 where n1.x=n2.x and n1.y=n2.y and n1.z=n2.z order by res desc")
+
+  res.show()
 
 
 
-
-
-
-
+//  neighboursSum.show()
 
 
 
 
 
   //return pickupInfo // YOU NEED TO CHANGE THIS PART
-  return neigboursSum
+  return neighboursSum
 }
 }
