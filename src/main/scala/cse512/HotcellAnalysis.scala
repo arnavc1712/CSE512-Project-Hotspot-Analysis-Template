@@ -47,8 +47,11 @@ def runHotcellAnalysis(spark: SparkSession, pointPath: String): DataFrame =
   val numCells:Double = (maxX - minX + 1)*(maxY - minY + 1)*(maxZ - minZ + 1)
 
   // YOU NEED TO CHANGE THIS PART
+  val givenpointsDf = spark.sql("select x,y,z from intermediate where x>=" + minX + " and x<= " + maxX + " and y>= " + minY + " and y<= " + maxY + " and z>= " + minZ + " and z<= " + maxZ + " order by z,y,x").persist();
+  givenpointsDf.createOrReplaceTempView("Df0")
+  givenpointsDf.show()
 
-  val uniqueCombsDF = spark.sql("select x,y,z,count(*) as cnt from intermediate group by z,x,y order by z,x,y")
+  val uniqueCombsDF = spark.sql("select x,y,z,count(*) as cnt from Df0 group by z,x,y order by z,x,y")
   uniqueCombsDF.createOrReplaceTempView("uniqueCombCount")
   spark.udf.register("Square",(num:Int)=>((num*num)));
 
@@ -74,7 +77,7 @@ def runHotcellAnalysis(spark: SparkSession, pointPath: String): DataFrame =
   })))
 //  val neigboursSum = spark.sql(f"select CalcNumNeighbors($minX%s,$maxX%s,$minY%s,$maxY%s,$minZ%s,$maxZ%s,l1.x,l1.y,l1.z), l1.x,l1.y,l1.z, sum(l2.cnt) as n_count from uniqueCombCount l1,uniqueCombCount l2 where (l1.x=l2.x and l1.y=l2.y and l1.z=l2.z) or (l2.x=l1.x-1 and l2.y=l1.y-1 and l2.z=l1.z-1) or (l2.x=l1.x+1 and l2.y=l1.y+1 and l2.z=l1.z+1) group by (l1.z,l1.y,l1.x) order by (l1.z,l1.y,l1.x)")
 
-  val neighboursSum = spark.sql(f"select CalcNumNeighbors($minX%s,$maxX%s,$minY%s,$maxY%s,$minZ%s,$maxZ%s,l1.x,l1.y,l1.z) as n_count, l1.x as x,l1.y as y,l1.z as z,sum(l2.cnt) as n_sum from uniqueCombCount l1, uniqueCombCount l2 where (l1.x=l2.x or l1.x=l2.x-1 or l1.x=l2.x+1) and (l1.y=l2.y or l1.y=l2.y-1 or l1.y=l2.y+1) and (l1.z=l2.z or l1.z=l2.z-1 and l1.z=l2.z+1) group by l1.z,l1.y,l1.x order by l1.z,l1.y,l1.x")
+  val neighboursSum = spark.sql(f"select CalcNumNeighbors($minX%s,$maxX%s,$minY%s,$maxY%s,$minZ%s,$maxZ%s,l1.x,l1.y,l1.z) as n_count, l1.x as x,l1.y as y,l1.z as z,sum(l2.cnt) as n_sum from uniqueCombCount l1, uniqueCombCount l2 where (l1.x=l2.x or l1.x=l2.x-1 or l1.x=l2.x+1) and (l1.y=l2.y or l1.y=l2.y-1 or l1.y=l2.y+1) and (l1.z=l2.z or l1.z=l2.z-1 or l1.z=l2.z+1) group by l1.z,l1.y,l1.x order by l1.z,l1.y,l1.x")
 
   neighboursSum.createOrReplaceTempView("neighboursSum")
 
@@ -99,6 +102,6 @@ def runHotcellAnalysis(spark: SparkSession, pointPath: String): DataFrame =
 
 
   //return pickupInfo // YOU NEED TO CHANGE THIS PART
-  return neighboursSum
+  return res
 }
 }
