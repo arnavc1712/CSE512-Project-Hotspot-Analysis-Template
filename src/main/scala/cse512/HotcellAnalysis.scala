@@ -112,8 +112,8 @@ object HotcellAnalysis {
 
     //  neighboursSum.show()
 
-    spark.udf.register("calculateGScore", (x: Int, y: Int, z: Int) => (HotcellUtils.calculateGScore(x, y, z, SD, mean, numCells, mapOfCounts)))
-    var Result = spark.sql("select x, y, z from uniqueCombCount order by calculateGScore(x, y, z) desc limit 50").persist()
+    spark.udf.register("calculateGScore", (x: Int, y: Int, z: Int) => (HotcellUtils.calculateGScore(x, y, z, minX,minY,minZ,maxX,maxY,maxZ,SD, mean, numCells, mapOfCounts)))
+    var Result = spark.sql(f"select x, y, z from uniqueCombCount order by calculateGScore(x, y, z) desc limit 50").persist()
     Result.show()
 
     return Result

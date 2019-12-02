@@ -4,6 +4,8 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
+import scala.collection.mutable.ListBuffer
+
 object HotcellUtils {
   val coordinateStep = 0.01
 
@@ -86,28 +88,32 @@ object HotcellUtils {
 
   // YOU NEED TO CHANGE THIS PART
 
-  def calculateGScore(x: Int, y: Int, z: Int, SD: Double, mean: Double, numCells: Double, mapOfCounts: Map[String, Int]): Double = {
+  def calculateGScore(x: Int, y: Int, z: Int,minX:Double,minY:Double,minZ:Double,maxX:Double,maxY:Double,maxZ:Double,SD: Double, mean: Double, numCells: Double, mapOfCounts: Map[String, Int]): Double = {
     val xValues = List(x-1, x, x+1)
     val yValues = List(y-1, y, y+1)
     val zValues = List(z-1, z, z+1)
-    var sumofW = 0
-    var sumofWX = 0
-    var sumofW2 = 0
+
+    var neighbours = new ListBuffer[Long]()
     for (i <- xValues) {
       for (j <- yValues) {
         for (k <- zValues) {
-            sumofW = sumofW + 1
-            val key = String.valueOf(i) + "|" + String.valueOf(j) + "|" + String.valueOf(k)
-            if (mapOfCounts.contains(key)){
-              sumofWX = sumofWX + mapOfCounts(key)
+
+            if (i>=minX && i<=maxX && j>=minY && j<=maxY && k>=minZ && k<=maxZ) {
+              val key = String.valueOf(i) + "|" + String.valueOf(j) + "|" + String.valueOf(k)
+              if (mapOfCounts.contains(key)) {
+                neighbours += mapOfCounts(key)
+              }
+
             }
-            sumofW2 = sumofW2 + (1 * 1)
         }
       }
     }
 
-    val dividend = sumofWX - (mean * sumofW)
-    val divisor = SD * math.sqrt((numCells * sumofW2) - math.pow(sumofW, 2)/ numCells - 1)
+    val num_neighbours = neighbours.size
+    val sum_neighbours = neighbours.sum
+    val dividend =sum_neighbours- (mean*num_neighbours)
+    val divisor = SD * math.sqrt((numCells*num_neighbours - num_neighbours*num_neighbours)/(numCells-1))
+
     val result = dividend / divisor
 
     //println(result)
