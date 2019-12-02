@@ -47,42 +47,72 @@ object HotcellUtils {
     return calendar.get(Calendar.DAY_OF_MONTH)
   }
 
-  def countNeighbors (minX:Int,maxX:Int,minY:Int,maxY:Int,minZ:Int,maxZ:Int,X:Int,Y:Int,Z:Int): Int = {
-
-    var count = 0
-
-    val cond1 = 7;
-    val cond2 = 11;
-    val cond3= 17;
-    val cond4 = 26;
-
-    if (X==minX || X==maxX){
-      count+=1;
-    }
-
-    if (Y==minY || Y==maxX) {
-      count+=1;
-    }
-
-    if (Z==minZ || Z==maxX){
-      count+=1;
-    }
-
-    if (count==1) {
-      return cond3
-    };
-
-    else if (count==2){
-      return cond2;
-    }
-
-    else if (count==3){
-      return cond1;
-    }
-
-    return cond4;
-
-  }
+//  def countNeighbors (minX:Int,maxX:Int,minY:Int,maxY:Int,minZ:Int,maxZ:Int,X:Int,Y:Int,Z:Int): Int = {
+//
+//    var count = 0
+//
+//    val cond1 = 7;
+//    val cond2 = 11;
+//    val cond3= 17;
+//    val cond4 = 26;
+//
+//    if (X==minX || X==maxX){
+//      count+=1;
+//    }
+//
+//    if (Y==minY || Y==maxX) {
+//      count+=1;
+//    }
+//
+//    if (Z==minZ || Z==maxX){
+//      count+=1;
+//    }
+//
+//    if (count==1) {
+//      return cond3
+//    };
+//
+//    else if (count==2){
+//      return cond2;
+//    }
+//
+//    else if (count==3){
+//      return cond1;
+//    }
+//
+//    return cond4;
+//
+//  }
 
   // YOU NEED TO CHANGE THIS PART
+
+  def calculateGScore(x: Int, y: Int, z: Int, SD: Double, mean: Double, numCells: Double, mapOfCounts: Map[String, Int]): Double = {
+    val xValues = List(x-1, x, x+1)
+    val yValues = List(y-1, y, y+1)
+    val zValues = List(z-1, z, z+1)
+    var sumofW = 0
+    var sumofWX = 0
+    var sumofW2 = 0
+    for (i <- xValues) {
+      for (j <- yValues) {
+        for (k <- zValues) {
+            sumofW = sumofW + 1
+            val key = String.valueOf(i) + "|" + String.valueOf(j) + "|" + String.valueOf(k)
+            if (mapOfCounts.contains(key)){
+              sumofWX = sumofWX + mapOfCounts(key)
+            }
+            sumofW2 = sumofW2 + (1 * 1)
+        }
+      }
+    }
+
+    val dividend = sumofWX - (mean * sumofW)
+    val divisor = SD * math.sqrt((numCells * sumofW2) - math.pow(sumofW, 2)/ numCells - 1)
+    val result = dividend / divisor
+
+    //println(result)
+
+    return result
+  }
+
 }
